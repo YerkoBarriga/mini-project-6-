@@ -1,0 +1,89 @@
+CREATE TABLE clientes (
+    id_cliente SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    apellidos VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE,
+    telefono VARCHAR(20),
+    direccion VARCHAR(255),
+    codigo_postal VARCHAR(10),
+    colonia VARCHAR(100)
+);
+CREATE TABLE ventas (
+    id_venta SERIAL PRIMARY KEY,
+    id_cliente INTEGER REFERENCES clientes(id_cliente),
+    fecha_venta DATE NOT NULL
+
+);
+
+CREATE TABLE productos (
+    id_producto SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT,
+    precio NUMERIC(10,2) NOT NULL,
+    sku VARCHAR(50) UNIQUE
+);
+CREATE TABLE producto_venta (
+    id_producto INTEGER REFERENCES productos(id_producto),
+    id_venta INTEGER REFERENCES ventas(id_venta),
+    cantidad INTEGER NOT NULL,
+    PRIMARY KEY (id_producto, id_venta) 
+);
+
+INSERT INTO clientes (nombre, apellidos, email, telefono, direccion, codigo_postal, colonia)
+VALUES
+    ('Juan', 'Pérez', 'juanperez@example.com', '5551234567', 'Av. Principal 123', '12345', 'Centro'),
+    ('María', 'López', 'marialopez@example.com', '5559876543', 'Calle Secundaria 456', '67890', 'Colonia Nueva')
+    
+;
+
+INSERT INTO productos (nombre, descripcion, precio, sku)
+VALUES
+    ('Manzana', 'Manzana roja, grande', 10.00, 'SKU123'),
+    ('Banana', 'Banana madura', 5.00, 'SKU456')
+  
+;
+
+INSERT INTO ventas (id_cliente, fecha_venta)
+VALUES
+    (1, '2023-11-22'),
+    (2, '2023-11-23')
+    
+;
+
+
+SELECT c.id_cliente, c.nombre
+FROM clientes as c
+WHERE c.direccion='monte rey'
+
+
+SELECT c.id_producto, c.descripcion
+FROM productos as c
+WHERE c.precio < 15
+
+SELECT c.id_cliente, c.nombre, pv.cantidad, p.descripcion
+FROM clientes c
+INNER JOIN ventas v ON c.id_cliente = v.id_cliente
+INNER JOIN producto_venta pv ON v.id_venta = pv.id_venta
+INNER JOIN productos p ON pv.id_producto = p.id_producto
+WHERE pv.cantidad > 10;
+
+
+SELECT id_cliente, nombre
+FROM clientes
+WHERE id_cliente NOT IN (
+    SELECT DISTINCT id_cliente FROM ventas
+);
+
+WITH total_productos AS (
+    SELECT COUNT(*) AS total FROM productos
+),
+clientes_con_todos_productos AS (
+    SELECT c.id_cliente, COUNT(DISTINCT pv.id_producto) AS productos_comprados
+    FROM clientes c
+    INNER JOIN ventas v ON c.id_cliente = v.id_cliente
+    INNER JOIN producto_venta pv ON v.id_venta = pv.id_venta
+    GROUP BY c.id_cliente
+)
+SELECT c.id_cliente, c.nombre
+FROM clientes_con_todos_productos cctp
+INNER JOIN total_productos tp ON cctp.productos_comprados = tp.total;
